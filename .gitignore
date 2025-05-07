@@ -1,0 +1,44 @@
+# Dependencies and build
+node_modules/
+.next/
+dist/
+build/
+*.tsbuildinfo
+
+# Large binary files and outputs
+*.node
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Environment and local files
+.env*
+!.env.example
+.local
+.cache
+*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE and OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Project specific
+backend/smartmart.db
+*.sqlite3
+coverage/
+.mypy_cache/
