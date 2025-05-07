@@ -1,47 +1,53 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { Button, Input, message } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 
-export const CategoryManager = () => {
-  const { register, handleSubmit, reset } = useForm();
-  const [categories, setCategories] = React.useState<{ id: number; name: string; products?: { length: number }[] }[]>([]);
+export const CategoryManager: React.FC = () => {
+  const [newCategory, setNewCategory] = React.useState('');
+  const [loading, setLoading] = React.useState(false);
 
-  const onSubmit = async (data) => {
-    await fetch('/api/categories', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    reset();
-    fetchCategories();
+  const handleSubmit = async () => {
+    if (!newCategory.trim()) {
+      message.error('Category name is required');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCategory })
+      });
+
+      if (!response.ok) throw new Error('Failed to create category');
+      
+      message.success('Category created successfully');
+      setNewCategory('');
+    } catch (error) {
+      message.error('Failed to create category');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
   };
-
-  const fetchCategories = () => {
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(setCategories);
-  };
-
-  React.useEffect(() => {
-    fetchCategories();
-  }, []);
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-2">
-        <input {...register('name')} placeholder="Category Name" className="w-full p-2 border rounded" />
-        <button type="submit" className="w-full p-2 bg-blue-500 text-white rounded">
-          Add Category
-        </button>
-      </form>
-      
-      <div className="grid grid-cols-1 gap-2">
-        {categories.map(cat => (
-          <div key={cat.id} className="p-2 border rounded flex justify-between items-center">
-            <span>{cat.name}</span>
-            <span className="text-gray-500">({cat.products?.length || 0} products)</span>
-          </div>
-        ))}
-      </div>
+    <div className="flex gap-2 items-center">
+      <Input
+        placeholder="New Category Name"
+        value={newCategory}
+        onChange={e => setNewCategory(e.target.value)}
+        onPressEnter={handleSubmit}
+      />
+      <Button
+        type="primary"
+        icon={<PlusOutlined />}
+        loading={loading}
+        onClick={handleSubmit}
+      >
+        Add Category
+      </Button>
     </div>
   );
 };

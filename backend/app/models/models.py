@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Date, DateTime, Boolean, Enum, JSON
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Date, DateTime, Boolean, Enum, JSON, Numeric
 from sqlalchemy.orm import relationship, validates
 from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
@@ -17,11 +17,13 @@ class ProductStatus(enum.Enum):
     OUT_OF_STOCK = "out_of_stock"
     DISCONTINUED = "discontinued"
 
-class Category(BaseModel):
+class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, unique=True, index=True)
-    description = Column(String, nullable=True)
+    name = Column(String(100), unique=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationship
     products = relationship("Product", back_populates="category")
 
     @validates('name')
@@ -54,15 +56,17 @@ class ProductVariant(BaseModel):
     stock = Column(Integer, default=0)
     price_adjustment = Column(Float, default=0.0)
 
-class Product(BaseModel):
+class Product(Base):
     __tablename__ = "products"
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+    name = Column(String(200), nullable=False)
     description = Column(String)
-    price = Column(Float)
-    cost = Column(Float, nullable=False, default=0.0)
+    price = Column(Float, nullable=False)
     stock = Column(Integer, default=0)
     category_id = Column(Integer, ForeignKey("categories.id"))
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
     category = relationship("Category", back_populates="products")
     sales = relationship("Sale", back_populates="product")
     status = Column(Enum(ProductStatus), default=ProductStatus.ACTIVE)
@@ -144,18 +148,17 @@ class Product(BaseModel):
             "variants": [v.attributes for v in self.variants]
         }
 
-class Sale(BaseModel):
+class Sale(Base):
     __tablename__ = "sales"
     id = Column(Integer, primary_key=True, index=True)
     product_id = Column(Integer, ForeignKey("products.id"))
-    quantity = Column(Integer)
-    total_price = Column(Float)
-    date = Column(Date)
-    cost_at_sale = Column(Float, nullable=False)
+    quantity = Column(Integer, nullable=False)
+    profit = Column(Float, nullable=False)
+    transaction_date = Column(Date, nullable=False)
+
+    # Relationship
     product = relationship("Product", back_populates="sales")
-    discount_applied = Column(Float, default=0.0)
-    tax_amount = Column(Float, default=0.0)
-    
+
     @property
     def profit(self):
         return self.total_price - (self.cost_at_sale * self.quantity)

@@ -14,7 +14,10 @@ build/
 
 # Environment and local files
 .env*
-!.env.example
+.env
+*.env
+.env.local
+.env.*.local
 .local
 .cache
 *.log
@@ -42,3 +45,30 @@ backend/smartmart.db
 *.sqlite3
 coverage/
 .mypy_cache/
+
+# Frontend specific
+.next
+.nuxt
+dist
+.cache/
+.parcel-cache/
+.output
+storybook-static/
+
+# Testing
+coverage/
+.nyc_output/
+junit.xml
+test-results/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*~
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log

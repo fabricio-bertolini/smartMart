@@ -1,6 +1,6 @@
 # SmartMart
 
-A web application for managing store inventory and categories.
+A full-stack inventory management system built with FastAPI and React.
 
 ## Prerequisites
 
@@ -9,53 +9,22 @@ A web application for managing store inventory and categories.
 - Python (v3.10 or v3.11)
 - pip package manager
 
-## Setup
-
-1. Clone the repository:
-```bash
-git clone https://github.com/yourusername/SmartMart.git
-cd SmartMart
-```
-
-2. Install dependencies:
-```bash
-# Install frontend dependencies
-cd frontend
-npm install
-
-# Install backend dependencies
-cd ../backend
-npm install
-```
-
-## Running the Project
-
-1. Start the backend server:
-```bash
-cd backend
-npm run dev
-```
-
-2. In a new terminal, start the frontend development server:
-```bash
-cd frontend
-npm run dev
-```
-
-3. Open your browser and navigate to `http://localhost:3000`
-
 ## Features
 
-- Category management
-- Product inventory tracking
-- Real-time updates
+- 📊 Sales dashboard with interactive charts
+- 📦 Product management with CSV import/export
+- 🏷️ Category management
+- 📈 Sales tracking and reporting
+- 💹 Profit analysis
 
 ## Technology Stack
 
-- Frontend: React, TypeScript, Tailwind CSS
-- Backend: Node.js, Express
-- Database: PostgreSQL
+- **Frontend**: React + Vite, TypeScript, Tailwind CSS, Ant Design
+- **Backend**: FastAPI, SQLAlchemy, PostgreSQL
+- **Data**: Pandas for CSV processing
+- **Charts**: Chart.js/React-Chartjs-2
 
+## Setting up the Project
 ## Backend Setup
 
 1. Navigate to the backend directory:
@@ -87,16 +56,6 @@ pip cache purge
 pip install -r requirements.txt
 ```
 
-If you still encounter issues:
-
-1. Try installing packages individually:
-```bash
-pip install pydantic==1.10.13
-pip install numpy==2.2.0
-pip install pandas==2.2.0
-pip install -r requirements.txt
-```
-
 4. Run the server:
 ```bash
 uvicorn main:app --reload
@@ -120,6 +79,21 @@ npm run dev
 ```
 
 Visit `http://localhost:3000` to access the application.
+
+## Running the Project
+
+1. Start the backend server:
+```bash
+cd backend
+npm run dev
+```
+
+2. In a new terminal, start the frontend development server:
+```bash
+cd frontend
+npm run dev
+```
+3. Open your browser and navigate to `http://localhost:3000`
 
 ## API Documentation
 

@@ -1,40 +1,26 @@
 import React from 'react';
+import { Button } from '@/components/ui';
 
 export const CsvExport = () => {
-  const downloadProducts = async () => {
-    const response = await fetch('/api/products/export');
+  const downloadCsv = async (type: 'products' | 'sales') => {
+    const response = await fetch(`http://localhost:8000/${type}/export-csv`);
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'products.csv';
+    a.download = `${type}.csv`;
     a.click();
-  };
-
-  const downloadSales = async () => {
-    const response = await fetch('/api/sales/export');
-    const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sales.csv';
-    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   return (
     <div className="flex gap-4">
-      <button 
-        onClick={downloadProducts}
-        className="p-2 bg-green-500 text-white rounded"
-      >
+      <Button onClick={() => downloadCsv('products')}>
         Export Products
-      </button>
-      <button 
-        onClick={downloadSales}
-        className="p-2 bg-green-500 text-white rounded"
-      >
+      </Button>
+      <Button onClick={() => downloadCsv('sales')}>
         Export Sales
-      </button>
+      </Button>
     </div>
   );
 };

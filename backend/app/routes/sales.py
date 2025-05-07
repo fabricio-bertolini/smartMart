@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from ..models.models import Sale, Product, Category
 from ..database import get_db
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 import csv
 from io import StringIO
 
@@ -15,7 +15,12 @@ async def get_sales(db: Session = Depends(get_db)):
 
 @router.post("/{product_id}")
 async def create_sale(product_id: int, quantity: int, total_price: float, db: Session = Depends(get_db)):
-    sale = Sale(product_id=product_id, quantity=quantity, total_price=total_price, date=date.today())
+    sale = Sale(
+        product_id=product_id,
+        quantity=quantity,
+        total_price=total_price,
+        transaction_date=date.today()
+    )
     db.add(sale)
     db.commit()
     return sale
@@ -40,9 +45,15 @@ async def export_sales(db: Session = Depends(get_db)):
     sales = db.query(Sale).all()
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Product ID", "Quantity", "Total Price", "Date"])
+    writer.writerow(["ID", "Product ID", "Quantity", "Total Price", "Transaction Date"])
     for sale in sales:
-        writer.writerow([sale.id, sale.product_id, sale.quantity, sale.total_price, sale.date])
+        writer.writerow([
+            sale.id, 
+            sale.product_id, 
+            sale.quantity, 
+            sale.total_price, 
+            sale.transaction_date
+        ])
     
     response = Response(content=output.getvalue())
     response.headers["Content-Disposition"] = "attachment; filename=sales.csv"
@@ -52,12 +63,12 @@ async def export_sales(db: Session = Depends(get_db)):
 @router.get("/monthly")
 async def get_monthly_sales(year: int = datetime.now().year, db: Session = Depends(get_db)):
     sales = db.query(Sale)\
-        .filter(Sale.date.between(f"{year}-01-01", f"{year}-12-31"))\
+        .filter(Sale.transaction_date.between(f"{year}-01-01", f"{year}-12-31"))\
         .all()
     
     monthly_data = {}
     for sale in sales:
-        month = sale.date.strftime("%B")  # Month name
+        month = sale.transaction_date.strftime("%B")  # Month name
         if month not in monthly_data:
             monthly_data[month] = {"quantity": 0, "profit": 0}
         monthly_data[month]["quantity"] += sale.quantity
@@ -77,3 +88,21 @@ async def get_sales_by_category(db: Session = Depends(get_db)):
             "data": [float(s.total) for s in sales]
         }]
     }
+
+@router.get("/stats") 
+async def get_sales_stats(db: Session = Depends(get_db)):
+    year_ago = datetime.now() - timedelta(days=365)
+    sales = db.query(Sale).filter(Sale.transaction_date >= year_ago).all()
+    
+    stats = {}
+    for sale in sales:
+        month = sale.transaction_date.strftime("%B %Y")
+        if month not in stats:
+            stats[month] = {
+                "quantity": 0,
+                "profit": 0
+            }
+        stats[month]["quantity"] += sale.quantity
+        stats[month]["profit"] += sale.profit
+        
+    return stats

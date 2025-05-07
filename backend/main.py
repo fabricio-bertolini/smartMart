@@ -1,8 +1,7 @@
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from app.database import init_db
+from app.routes import products, categories, sales, api
 import pandas as pd
 from datetime import datetime
 import os
@@ -18,22 +17,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database setup
-SQLALCHEMY_DATABASE_URL = "sqlite:///./smartmart.db"
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# Import routes
-from app.routes import products, categories, sales
-from .app.middleware import rate_limit_middleware
+# Initialize database tables
+init_db()
 
 # Include routers
-app.include_router(products.router)
-app.include_router(categories.router)
-app.include_router(sales.router)
-
-app.middleware("http")(rate_limit_middleware)
+app.include_router(api.router)
+app.include_router(products.router, prefix="/products")
+app.include_router(categories.router, prefix="/categories")
+app.include_router(sales.router, prefix="/sales")
 
 @app.get("/health")
 async def health_check():
