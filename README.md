@@ -8,96 +8,98 @@ A full-stack inventory management system built with FastAPI and React.
 - npm or yarn package manager
 - Python (v3.10 or v3.11)
 - pip package manager
+- PostgreSQL
 
 ## Features
 
 - 📊 Sales dashboard with interactive charts
 - 📦 Product management with CSV import/export
-- 🏷️ Category management
+- 🏷️ Category management (add, list)
 - 📈 Sales tracking and reporting
 - 💹 Profit analysis
 
 ## Technology Stack
 
-- **Frontend**: React + Vite, TypeScript, Tailwind CSS, Ant Design
+- **Frontend**: React + Next.js, TypeScript, Tailwind CSS, Ant Design
 - **Backend**: FastAPI, SQLAlchemy, PostgreSQL
 - **Data**: Pandas for CSV processing
 - **Charts**: Chart.js/React-Chartjs-2
 
 ## Setting up the Project
-## Backend Setup
+
+### Backend Setup
 
 1. Navigate to the backend directory:
-```bash
-cd backend
-```
+    ```bash
+    cd backend
+    ```
 
 2. Create a virtual environment:
-```bash
-# On Windows:
-python -m venv venv
-.\venv\Scripts\activate
+    ```bash
+    # On Windows:
+    python -m venv venv
+    .\venv\Scripts\activate
 
-# On macOS/Linux:
-python3 -m venv venv
-source venv/bin/activate
-```
+    # On macOS/Linux:
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
 
 3. Install prerequisites and dependencies:
-```bash
-# Update pip first
-python -m pip install --upgrade pip
-pip install --upgrade setuptools wheel
-
-# Clean environment and cache
-pip cache purge
-
-# Install packages
-pip install -r requirements.txt
-```
+    ```bash
+    python -m pip install --upgrade pip
+    pip install --upgrade setuptools wheel
+    pip cache purge
+    pip install -r requirements.txt
+    ```
 
 4. Run the server:
-```bash
-uvicorn main:app --reload
-```
+    ```bash
+    uvicorn main:app --reload
+    ```
+    The backend will be available at [http://localhost:8000](http://localhost:8000).
 
-## Frontend Setup
+### Frontend Setup
 
 1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
+    ```bash
+    cd frontend
+    ```
 
 2. Install dependencies:
-```bash
-npm install
-```
+    ```bash
+    npm install
+    ```
 
 3. Run the development server:
-```bash
-npm run dev
-```
+    ```bash
+    npm run dev
+    ```
+    The frontend will be available at [http://localhost:3000](http://localhost:3000).
 
-Visit `http://localhost:3000` to access the application.
+**Note:**  
+The frontend (Next.js) is configured to proxy API requests starting with `/api` to the backend (`http://localhost:8000`).  
+Make sure both servers are running for full functionality.
 
 ## Running the Project
 
 1. Start the backend server:
-```bash
-cd backend
-npm run dev
-```
+    ```bash
+    cd backend
+    uvicorn main:app --reload
+    ```
 
 2. In a new terminal, start the frontend development server:
-```bash
-cd frontend
-npm run dev
-```
-3. Open your browser and navigate to `http://localhost:3000`
+    ```bash
+    cd frontend
+    npm run dev
+    ```
+
+3. Open your browser and navigate to [http://localhost:3000](http://localhost:3000)
 
 ## API Documentation
 
-The API documentation is available at `http://localhost:8000/docs` when the backend server is running.
+The API documentation is available at [http://localhost:8000/docs](http://localhost:8000/docs) when the backend server is running.
 
 ## Project Structure
 
@@ -129,106 +131,32 @@ SmartMart/
 └── README.md
 ```
 
-## Development
-
-To set up the development environment:
-
-1. Install backend dependencies and start the server
-2. Install frontend dependencies and start the development server
-3. Access the application at http://localhost:3000
-
-## Testing
-
-### Backend Tests
-```bash
-cd backend
-pytest tests/
-```
-
-### Frontend Tests
-```bash
-cd frontend
-npm run test
-```
-
-## Deployment
-
-### Docker Deployment
-```bash
-docker-compose up -d
-```
-
-The application will be available at:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
-
-### Environment Variables
+## Environment Variables
 
 Create `.env` files in both backend and frontend directories:
 
 ```env
 # Backend (.env)
-DATABASE_URL=sqlite:///./smartmart.db
+DATABASE_URL=postgresql://user:password@localhost:5432/smartmart
 JWT_SECRET=your-secret-key
 CORS_ORIGINS=http://localhost:3000
 
-# Frontend (.env.local)
+# Frontend (.env)
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
-## Security
-
-### Rate Limiting
-The API implements rate limiting of 100 requests per minute per IP address.
-
-### Authentication
-JWT-based authentication is required for all protected endpoints.
-
-### Best Practices
-- Keep JWT_SECRET secure and unique per environment
-- Rotate secrets regularly
-- Use HTTPS in production
-- Implement proper input validation
-
-## Performance
-
-### Optimization Tips
-1. Database Indexing
-   - Index frequently queried fields
-   - Use composite indexes for common query patterns
-
-2. Caching Strategy
-   - Redis cache for frequently accessed data
-   - Browser caching for static assets
-
-3. API Optimization
-   - Use pagination for large datasets
-   - Implement query optimization
-   - Enable compression
-
-## Monitoring
-
-Access monitoring endpoints at:
-- `/metrics` - System metrics
-- `/health` - System health status
-- `/stats` - API usage statistics
-
 ## Troubleshooting
 
-Common issues and solutions:
+- **Dashboard not showing data:**  
+  Ensure both backend and frontend are running.  
+  Check browser console and network tab for errors.  
+  Make sure `/api/sales/stats` returns data from the backend.
 
-1. Database Connection Issues
-   - Verify database URL in `.env`
-   - Check database permissions
+- **CORS errors:**  
+  Confirm `CORS_ORIGINS` in backend `.env` matches your frontend URL.
 
-2. CORS Errors
-   - Ensure frontend URL is listed in CORS_ORIGINS
-   - Check API URL in frontend environment
-
-3. CSV Import Failures
-   - Verify CSV column names match expected format
-   - Check file encoding (UTF-8 required)
+- **CSV Import Fails:**  
+  Ensure your CSV columns match the expected format (`name`, `price`, `category_id`, etc).
 
 ## Contributing
 

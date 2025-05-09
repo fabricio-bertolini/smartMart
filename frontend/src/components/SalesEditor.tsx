@@ -1,6 +1,14 @@
 import React from 'react';
 import { Card } from '@/components/ui';
 
+interface Sale {
+  id: number;
+  product_id: number;
+  quantity: number;
+  total_price: number;
+  date: string;
+}
+
 export const SalesEditor = () => {
   const [monthlySales, setMonthlySales] = React.useState({});
   const [year, setYear] = React.useState(new Date().getFullYear());
@@ -12,9 +20,12 @@ export const SalesEditor = () => {
     setError(null);
     try {
       const res = await fetch(`/api/sales/monthly?year=${year}`);
-      if (!res.ok) throw new Error('Failed to fetch sales data');
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Failed to fetch sales data: ${res.status} ${text}`);
+      }
       const data = await res.json();
-      setMonthlySales(data);
+      setMonthlySales(data || {});
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       setMonthlySales({});
@@ -100,7 +111,7 @@ export const SalesEditor = () => {
           <tr>
             <th>Month</th>
             <th>Quantity</th>
-            <th>Profit</th>
+            <th>Total Price</th>
           </tr>
         </thead>
         <tbody>
@@ -118,8 +129,8 @@ export const SalesEditor = () => {
               <td>
                 <input
                   type="number"
-                  value={data.profit}
-                  onChange={(e) => updateSale(month, 'profit', Number(e.target.value))}
+                  value={data.total_price}
+                  onChange={(e) => updateSale(month, 'total_price', Number(e.target.value))}
                   className="border p-1 w-24"
                 />
               </td>

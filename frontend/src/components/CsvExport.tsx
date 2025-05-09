@@ -3,7 +3,12 @@ import { Button } from '@/components/ui';
 
 export const CsvExport = () => {
   const downloadCsv = async (type: 'products' | 'sales') => {
-    const response = await fetch(`http://localhost:8000/${type}/export-csv`);
+    // Use the correct API endpoints
+    const response = await fetch(`/api/${type}/export`);
+    if (!response.ok) {
+      alert(`Failed to export ${type} CSV`);
+      return;
+    }
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');

@@ -6,6 +6,8 @@ interface Product {
   description: string;
   price: number;
   category_id: number;
+  brand: string;
+  status: 'active' | 'out_of_stock' | 'discontinued';
 }
 
 export const ProductList = () => {
@@ -18,8 +20,8 @@ export const ProductList = () => {
 
   React.useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8000/products').then(res => res.json()),
-      fetch('http://localhost:8000/categories').then(res => res.json())
+      fetch('/api/products').then(res => res.json()),
+      fetch('/api/categories').then(res => res.json())
     ]).then(([productsData, categoriesData]) => {
       setProducts(productsData);
       setCategories(categoriesData);

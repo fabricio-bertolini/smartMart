@@ -2,17 +2,28 @@ import React from 'react';
 
 export const CsvUpload = () => {
   const [file, setFile] = React.useState<File | null>(null);
+  const [loading, setLoading] = React.useState(false);
 
   const handleUpload = async () => {
     if (!file) return;
+    setLoading(true);
 
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    await fetch('http://localhost:8000/products/upload-csv', {
-      method: 'POST',
-      body: formData,
-    });
+      const response = await fetch('/api/products/upload-csv', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) throw new Error('Upload failed');
+    } catch (error) {
+      console.error('Upload error:', error);
+    } finally {
+      setLoading(false);
+      setFile(null);
+    }
   };
 
   return (
@@ -26,9 +37,9 @@ export const CsvUpload = () => {
       <button 
         onClick={handleUpload}
         className="px-4 py-2 bg-blue-500 text-white rounded"
-        disabled={!file}
+        disabled={!file || loading}
       >
-        Upload CSV
+        {loading ? 'Uploading...' : 'Upload CSV'}
       </button>
     </div>
   );

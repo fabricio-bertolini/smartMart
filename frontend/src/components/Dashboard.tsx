@@ -25,26 +25,56 @@ ChartJS.register(
   PointElement
 );
 
+// Add these above your component
+interface SaleData {
+  quantity: number;
+  total_price: number;
+}
+
+interface Category {
+  id: number;
+  name: string;
+}
+
 export const Dashboard = () => {
-  const [salesData, setSalesData] = React.useState([]);
-  const [selectedCategory, setSelectedCategory] = React.useState('');  // Changed from null to empty string
+  const [salesData, setSalesData] = React.useState<Record<string, any>>({});
+  const [selectedCategory, setSelectedCategory] = React.useState('');
   const [categories, setCategories] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    setLoading(true);
+    setError(null);
+
     Promise.all([
-      fetch('http://localhost:8000/sales/stats')
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .catch(() => ({})),
-      fetch('http://localhost:8000/categories/')
-        .then(res => res.ok ? res.json() : Promise.reject(res))
-        .catch(() => [])
-    ]).then(([sales, cats]) => {
-      setSalesData(sales || {});
-      setCategories(cats || []);
-    }).catch(error => {
-      console.error('Failed to fetch dashboard data:', error);
-    });
+      fetch('/api/sales/stats'),
+      fetch('/api/categories')
+    ])
+      .then(([salesRes, categoriesRes]) => 
+        Promise.all([
+          salesRes.ok ? salesRes.json() : Promise.reject('Failed to fetch sales data'),
+          categoriesRes.ok ? categoriesRes.json() : Promise.reject('Failed to fetch categories')
+        ])
+      )
+      .then(([sales, cats]) => {
+        setSalesData(sales || {});
+        setCategories(cats || []);
+      })
+      .catch(error => {
+        console.error('Dashboard data fetch error:', error);
+        setError(typeof error === 'string' ? error : 'Failed to fetch dashboard data');
+      })
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) {
+    return <div>Loading dashboard data...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>;
+  }
 
   const chartOptions = {
     responsive: true,
@@ -94,8 +124,8 @@ export const Dashboard = () => {
             data={{
               labels: Object.keys(salesData),
               datasets: [{
-                label: 'Sales Profit',
-                data: Object.values(salesData).map(d => d.profit),
+                label: 'Sales Revenue',
+                data: Object.values(salesData).map(d => d.total_price),
                 borderColor: 'rgb(75, 192, 192)',
                 tension: 0.1
               }]

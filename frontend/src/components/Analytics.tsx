@@ -3,33 +3,54 @@ import { Line, Pie } from 'react-chartjs-2';
 
 export const Analytics = () => {
   const [analyticsData, setAnalyticsData] = React.useState({
-    monthlySales: [],
-    categoryDistribution: []
+    monthlySales: {
+      labels: [],
+      datasets: []
+    },
+    categoryDistribution: {
+      labels: [],
+      datasets: []
+    }
   });
+  const [error, setError] = React.useState('');
 
   React.useEffect(() => {
     Promise.all([
-      fetch('http://localhost:8000/sales/monthly'),
-      fetch('http://localhost:8000/sales/by-category')
-    ]).then(([monthlyRes, categoryRes]) => 
-      Promise.all([monthlyRes.json(), categoryRes.json()])
-    ).then(([monthlyData, categoryData]) => {
-      setAnalyticsData({
-        monthlySales: monthlyData,
-        categoryDistribution: categoryData
+      fetch('/sales/monthly?year=' + new Date().getFullYear()),
+      fetch('/sales/by-category')
+    ])
+      .then(([monthlyRes, categoryRes]) => {
+        if (!monthlyRes.ok) throw new Error('Failed to fetch monthly data');
+        if (!categoryRes.ok) throw new Error('Failed to fetch category data');
+        return Promise.all([monthlyRes.json(), categoryRes.json()]);
+      })
+      .then(([monthlyData, categoryData]) => {
+        setAnalyticsData({
+          monthlySales: monthlyData,
+          categoryDistribution: categoryData
+        });
+      })
+      .catch(err => {
+        setError(err.message);
+        console.error('Error fetching analytics:', err);
       });
-    });
   }, []);
 
+  if (error) {
+    return <div className="text-red-500">Error loading analytics: {error}</div>;
+  }
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div className="p-4 bg-white rounded shadow">
-        <h3 className="text-lg font-semibold mb-4">Monthly Sales Trend</h3>
-        <Line data={analyticsData.monthlySales} />
-      </div>
-      <div className="p-4 bg-white rounded shadow">
-        <h3 className="text-lg font-semibold mb-4">Sales by Category</h3>
-        <Pie data={analyticsData.categoryDistribution} />
+    <div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Monthly Sales Trend</h3>
+          <Line data={analyticsData.monthlySales} options={{ responsive: true }} />
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Sales by Category</h3>
+          <Pie data={analyticsData.categoryDistribution} options={{ responsive: true }} />
+        </div>
       </div>
     </div>
   );
