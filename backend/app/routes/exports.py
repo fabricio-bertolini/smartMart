@@ -13,15 +13,16 @@ router = APIRouter()
 async def export_products(db: Session = Depends(get_db)):
     products = db.query(Product).all()
     output = StringIO()
-    writer = csv.DictWriter(output, fieldnames=["name", "price", "cost", "stock", "category"])
+    writer = csv.DictWriter(output, fieldnames=["id", "name", "description", "price", "category_id", "brand"])
     writer.writeheader()
     for product in products:
         writer.writerow({
+            "id": product.id,
             "name": product.name,
+            "description": product.description,
             "price": product.price,
-            "cost": product.cost,
-            "stock": product.stock,
-            "category": product.category.name if product.category else ""
+            "category_id": product.category_id,
+            "brand": product.brand
         })
     return StreamingResponse(
         iter([output.getvalue()]),

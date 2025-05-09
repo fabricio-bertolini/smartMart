@@ -1,87 +1,120 @@
-from fastapi import APIRouter, Depends, Response, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
-from sqlalchemy import func
 from ..models.models import Sale, Product, Category
 from ..database import get_db
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 import csv
 from io import StringIO
+from sqlalchemy import func
 
 router = APIRouter(prefix="/sales", tags=["sales"])
 
 @router.get("/")
 async def get_sales(db: Session = Depends(get_db)):
-    return db.query(Sale).all()
+    sales = db.query(Sale).all()
+    return [
+        {
+            "id": s.id,
+            "product_id": s.product_id,
+            "quantity": s.quantity,
+            "total_price": s.total_price,
+            "date": s.date.isoformat()
+        }
+        for s in sales
+    ]
 
-@router.post("/{product_id}")
-async def create_sale(product_id: int, quantity: int, total_price: float, db: Session = Depends(get_db)):
-    sale = Sale(
-        product_id=product_id,
-        quantity=quantity,
-        total_price=total_price,
-        transaction_date=date.today()
+@router.post("/")
+async def create_sale(sale: dict, db: Session = Depends(get_db)):
+    required_fields = {"product_id", "quantity", "total_price", "date"}
+    if not all(field in sale for field in required_fields):
+        raise HTTPException(status_code=400, detail="Missing required fields")
+    db_sale = Sale(
+        product_id=sale["product_id"],
+        quantity=sale["quantity"],
+        total_price=sale["total_price"],
+        date=datetime.fromisoformat(sale["date"]).date()
     )
-    db.add(sale)
+    db.add(db_sale)
     db.commit()
-    return sale
+    db.refresh(db_sale)
+    return {
+        "id": db_sale.id,
+        "product_id": db_sale.product_id,
+        "quantity": db_sale.quantity,
+        "total_price": db_sale.total_price,
+        "date": db_sale.date.isoformat()
+    }
 
 @router.put("/{sale_id}")
 async def update_sale(sale_id: int, updates: dict, db: Session = Depends(get_db)):
     sale = db.query(Sale).filter(Sale.id == sale_id).first()
     if not sale:
         raise HTTPException(status_code=404, detail="Sale not found")
-    
-    for key, value in updates.items():
-        setattr(sale, key, value)
-    
-    if "quantity" in updates:
-        sale.total_price = sale.product.price * updates["quantity"]
-    
+    for key in ["product_id", "quantity", "total_price", "date"]:
+        if key in updates:
+            if key == "date":
+                setattr(sale, key, datetime.fromisoformat(updates[key]).date())
+            else:
+                setattr(sale, key, updates[key])
     db.commit()
-    return sale
+    db.refresh(sale)
+    return {
+        "id": sale.id,
+        "product_id": sale.product_id,
+        "quantity": sale.quantity,
+        "total_price": sale.total_price,
+        "date": sale.date.isoformat()
+    }
 
 @router.get("/export")
 async def export_sales(db: Session = Depends(get_db)):
     sales = db.query(Sale).all()
     output = StringIO()
     writer = csv.writer(output)
-    writer.writerow(["ID", "Product ID", "Quantity", "Total Price", "Transaction Date"])
-    for sale in sales:
-        writer.writerow([
-            sale.id, 
-            sale.product_id, 
-            sale.quantity, 
-            sale.total_price, 
-            sale.transaction_date
-        ])
-    
-    response = Response(content=output.getvalue())
-    response.headers["Content-Disposition"] = "attachment; filename=sales.csv"
-    response.headers["Content-Type"] = "text/csv"
-    return response
+    writer.writerow(["id", "product_id", "quantity", "total_price", "date"])
+    for s in sales:
+        writer.writerow([s.id, s.product_id, s.quantity, s.total_price, s.date.isoformat()])
+    output.seek(0)
+    return Response(content=output.read(), media_type="text/csv")
 
 @router.get("/monthly")
 async def get_monthly_sales(year: int = datetime.now().year, db: Session = Depends(get_db)):
-    sales = db.query(Sale)\
-        .filter(Sale.transaction_date.between(f"{year}-01-01", f"{year}-12-31"))\
-        .all()
-    
-    monthly_data = {}
-    for sale in sales:
-        month = sale.transaction_date.strftime("%B")  # Month name
-        if month not in monthly_data:
-            monthly_data[month] = {"quantity": 0, "profit": 0}
-        monthly_data[month]["quantity"] += sale.quantity
-        monthly_data[month]["profit"] += sale.profit
-    
-    return monthly_data
+    try:
+        sales = db.query(Sale)\
+            .filter(Sale.date.between(f"{year}-01-01", f"{year}-12-31"))\
+            .all()
+        
+        months = ["January", "February", "March", "April", "May", "June",
+                 "July", "August", "September", "October", "November", "December"]
+        
+        data = {month: {"quantity": 0, "total_price": 0} for month in months}
+        
+        for sale in sales:
+            month = sale.date.strftime("%B")
+            data[month]["quantity"] += sale.quantity
+            data[month]["total_price"] += float(sale.total_price)
+        
+        return {
+            "labels": months,
+            "datasets": [{
+                "label": "Monthly Sales",
+                "data": [data[month]["total_price"] for month in months]
+            }]
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/by-category")
 async def get_sales_by_category(db: Session = Depends(get_db)):
     sales = db.query(
         Category.name,
         func.sum(Sale.total_price).label("total")
-    ).join(Product).join(Category).group_by(Category.name).all()
+    ).select_from(Sale)\
+    .join(Product, Sale.product_id == Product.id)\
+    .join(Category, Product.category_id == Category.id)\
+    .group_by(Category.name)\
+    .all()
+    
     return {
         "labels": [s.name for s in sales],
         "datasets": [{
@@ -89,20 +122,26 @@ async def get_sales_by_category(db: Session = Depends(get_db)):
         }]
     }
 
-@router.get("/stats") 
+@router.get("/stats")
 async def get_sales_stats(db: Session = Depends(get_db)):
-    year_ago = datetime.now() - timedelta(days=365)
-    sales = db.query(Sale).filter(Sale.transaction_date >= year_ago).all()
-    
-    stats = {}
-    for sale in sales:
-        month = sale.transaction_date.strftime("%B %Y")
-        if month not in stats:
-            stats[month] = {
-                "quantity": 0,
-                "profit": 0
-            }
-        stats[month]["quantity"] += sale.quantity
-        stats[month]["profit"] += sale.profit
+    try:
+        year_ago = datetime.now() - timedelta(days=365)
+        sales = db.query(Sale)\
+            .join(Product)\
+            .filter(Sale.date >= year_ago)\
+            .all()
         
-    return stats
+        monthly_stats = {}
+        
+        for sale in sales:
+            month = sale.date.strftime("%B %Y")
+            if month not in monthly_stats:
+                monthly_stats[month] = {"quantity": 0, "profit": 0}
+                
+            monthly_stats[month]["quantity"] += sale.quantity
+            profit = sale.total_price - (sale.product.cost * sale.quantity)
+            monthly_stats[month]["profit"] += profit
+            
+        return monthly_stats
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

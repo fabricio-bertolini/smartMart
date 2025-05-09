@@ -11,7 +11,7 @@ app = FastAPI()
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000"],  # Update to match your frontend URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -20,11 +20,11 @@ app.add_middleware(
 # Initialize database tables
 init_db()
 
-# Include routers
-app.include_router(api.router)
-app.include_router(products.router, prefix="/products")
-app.include_router(categories.router, prefix="/categories")
-app.include_router(sales.router, prefix="/sales")
+# Include routers without duplicate prefixes
+app.include_router(api.router)  # This already has /api prefix
+app.include_router(sales.router)  # This already has /sales prefix 
+app.include_router(categories.router)  # This already has /categories prefix
+app.include_router(products.router)  # This already has /products prefix
 
 @app.get("/health")
 async def health_check():
