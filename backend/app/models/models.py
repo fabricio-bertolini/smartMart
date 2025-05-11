@@ -6,15 +6,6 @@ import enum
 
 Base = declarative_base()
 
-class BaseModel(Base):
-    __abstract__ = True
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    is_deleted = Column(Boolean, default=False)
-
-class ProductStatus(enum.Enum):
-    ACTIVE = "active"
-    DISCONTINUED = "discontinued"
-
 class Category(Base):
     __tablename__ = "categories"
     id = Column(Integer, primary_key=True, index=True)
@@ -31,13 +22,6 @@ class Category(Base):
     @property
     def total_products_value(self):
         return sum(product.price for product in self.products)
-
-class BatchOperation(BaseModel):
-    __tablename__ = "batch_operations"
-    id = Column(Integer, primary_key=True, index=True)
-    operation_type = Column(String)
-    changes = Column(JSON)
-    status = Column(String, default="pending")
 
 class Product(Base):
     __tablename__ = "products"
@@ -63,7 +47,7 @@ class Product(Base):
 
 class Sale(Base):
     __tablename__ = "sales"
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     product_id = Column(Integer, ForeignKey("products.id"))
     quantity = Column(Integer, nullable=False)
     total_price = Column(Float, nullable=False)

@@ -10,8 +10,7 @@ interface Sale {
 }
 
 export const SalesEditor = () => {
-  const [monthlySales, setMonthlySales] = React.useState({});
-  const [year, setYear] = React.useState(new Date().getFullYear());
+  const [sales, setSales] = React.useState<Sale[]>([]);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -19,58 +18,45 @@ export const SalesEditor = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/sales/monthly?year=${year}`);
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`Failed to fetch sales data: ${res.status} ${text}`);
-      }
+      const res = await fetch('/api/sales/');
+      if (!res.ok) throw new Error('Failed to fetch sales');
       const data = await res.json();
-      setMonthlySales(data || {});
+      setSales(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
-      setMonthlySales({});
+      setSales([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const updateSale = React.useCallback(async (month: string, field: string, value: number) => {
-    try {
-      setMonthlySales(prev => ({
-        ...prev,
-        [month]: { ...prev[month], [field]: value }
-      }));
-
-      const updated = { ...monthlySales[month], [field]: value };
-      const res = await fetch(`/api/sales/${month}`, {
-        method: 'PUT',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache'
-        },
-        body: JSON.stringify(updated)
-      });
-
-      if (!res.ok) {
-        throw new Error(`Failed to update sales data: ${res.statusText}`);
-      }
-
-      // Only refetch if the update was successful
-      const updatedData = await res.json();
-      setMonthlySales(prev => ({
-        ...prev,
-        [month]: updatedData
-      }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update sales');
-      // Revert the optimistic update on error
-      await fetchSales();
-    }
-  }, [monthlySales]);
-
   React.useEffect(() => {
     fetchSales();
-  }, [year]);
+  }, []);
+
+  const handleEdit = async (saleId: number, field: keyof Sale, value: string | number) => {
+    const sale = sales.find(s => s.id === saleId);
+    if (!sale) return;
+    const updated = { ...sale, [field]: value };
+    // Convert date to ISO if editing date
+    if (field === 'date') {
+      updated.date = String(value);
+    }
+    try {
+      const res = await fetch(`/api/sales/${saleId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated),
+      });
+      if (!res.ok) throw new Error('Failed to update sale');
+      const updatedSale = await res.json();
+      setSales(prev =>
+        prev.map(s => (s.id === saleId ? { ...s, ...updatedSale } : s))
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update sale');
+    }
+  };
 
   if (loading) {
     return <Card className="p-4">Loading sales data...</Card>;
@@ -80,7 +66,7 @@ export const SalesEditor = () => {
     return (
       <Card className="p-4">
         <div className="text-red-500">{error}</div>
-        <button 
+        <button
           onClick={fetchSales}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
@@ -92,52 +78,68 @@ export const SalesEditor = () => {
 
   return (
     <Card className="p-4">
-      <div className="flex justify-between mb-4">
-        <h2 className="text-xl font-bold">Monthly Sales Editor</h2>
-        <select 
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
-          className="border p-1"
-        >
-          {Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i)
-            .map(y => (
-              <option key={y} value={y}>{y}</option>
-            ))}
-        </select>
-      </div>
-
-      <table className="w-full">
-        <thead>
-          <tr>
-            <th>Month</th>
-            <th>Quantity</th>
-            <th>Total Price</th>
-          </tr>
-        </thead>
-        <tbody>
-          {Object.entries(monthlySales).map(([month, data]: [string, any]) => (
-            <tr key={month}>
-              <td>{month}</td>
-              <td>
-                <input
-                  type="number"
-                  value={data.quantity}
-                  onChange={(e) => updateSale(month, 'quantity', Number(e.target.value))}
-                  className="border p-1 w-24"
-                />
-              </td>
-              <td>
-                <input
-                  type="number"
-                  value={data.total_price}
-                  onChange={(e) => updateSale(month, 'total_price', Number(e.target.value))}
-                  className="border p-1 w-24"
-                />
-              </td>
+      <h2 className="text-xl font-bold mb-4">Sales Editor</h2>
+      <div className="overflow-x-auto">
+        <table className="w-full border">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Product ID</th>
+              <th>Quantity</th>
+              <th>Total Price</th>
+              <th>Date</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sales.map(sale => (
+              <tr key={sale.id}>
+                <td>{sale.id}</td>
+                <td>
+                  <input
+                    type="number"
+                    value={sale.product_id}
+                    onChange={e =>
+                      handleEdit(sale.id, 'product_id', Number(e.target.value))
+                    }
+                    className="border p-1 w-24"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={sale.quantity}
+                    onChange={e =>
+                      handleEdit(sale.id, 'quantity', Number(e.target.value))
+                    }
+                    className="border p-1 w-24"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="number"
+                    value={sale.total_price}
+                    step="0.01"
+                    onChange={e =>
+                      handleEdit(sale.id, 'total_price', Number(e.target.value))
+                    }
+                    className="border p-1 w-24"
+                  />
+                </td>
+                <td>
+                  <input
+                    type="date"
+                    value={sale.date.slice(0, 10)}
+                    onChange={e =>
+                      handleEdit(sale.id, 'date', e.target.value)
+                    }
+                    className="border p-1 w-36"
+                  />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </Card>
   );
 };

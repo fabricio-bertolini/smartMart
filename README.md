@@ -145,6 +145,22 @@ CORS_ORIGINS=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:8000
 ```
 
+## CSV Import
+
+- **Products:**  
+  POST `/api/products/csv` with a CSV file containing columns: `name`, `price`, `category_id`, etc.
+
+- **Categories:**  
+  POST `/api/categories/csv` with a CSV file containing at least the column: `name`.
+
+  Example CSV:
+  ```
+  name
+  Electronics
+  Groceries
+  Clothing
+  ```
+
 ## Troubleshooting
 
 - **Dashboard not showing data:**  

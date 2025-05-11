@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form
 from sqlalchemy.orm import Session
 from ..models.models import Sale, Product, Category
 from ..database import get_db
@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 import csv
 from io import StringIO
 from sqlalchemy import func
+import pandas as pd
 
 router = APIRouter(prefix="/sales", tags=["sales"])
 
@@ -145,3 +146,56 @@ async def get_sales_stats(db: Session = Depends(get_db)):
         return monthly_stats
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/import/csv")
+async def import_csv(
+    file: UploadFile = File(...),
+    type: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        content = await file.read()
+        df = pd.read_csv(StringIO(content.decode('utf-8')))
+
+        required_columns = {'product_id', 'quantity', 'total_price', 'date'}
+        if not required_columns.issubset(df.columns):
+            raise HTTPException(status_code=400, detail="Sales CSV missing required columns")
+
+        sales = []
+        for idx, row in df.iterrows():
+            try:
+                if any(pd.isna(row[col]) for col in required_columns):
+                    continue
+                try:
+                    product_id = int(row['product_id'])
+                    quantity = int(row['quantity'])
+                    total_price = float(row['total_price'])
+                    date = datetime.strptime(str(row['date']), '%Y-%m-%d').date()
+                    if quantity <= 0:
+                        continue
+                    if total_price <= 0:
+                        continue
+                    product = db.query(Product).get(product_id)
+                    if not product:
+                        continue
+                    sale = Sale(
+                        product_id=product_id,
+                        quantity=quantity,
+                        total_price=total_price,
+                        date=date
+                    )
+                    sales.append(sale)
+                    db.add(sale)
+                except ValueError:
+                    continue
+            except Exception:
+                continue
+
+        if not sales:
+            raise HTTPException(status_code=400, detail="No valid sales to import")
+
+        db.commit()
+        return {"message": f"Successfully imported {len(sales)} sales records"}
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))

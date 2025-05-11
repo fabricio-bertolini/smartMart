@@ -23,8 +23,8 @@ export const ProductList = () => {
       fetch('/api/products').then(res => res.json()),
       fetch('/api/categories').then(res => res.json())
     ]).then(([productsData, categoriesData]) => {
-      setProducts(productsData);
-      setCategories(categoriesData);
+      setProducts(productsData.data || []);      // <-- Fix: use .data
+      setCategories(categoriesData.data || []);   // <-- Fix: use .data
     });
   }, []);
 

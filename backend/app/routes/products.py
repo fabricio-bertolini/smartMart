@@ -27,7 +27,7 @@ async def create_product(product: dict, db: Session = Depends(get_db)):
 
 @router.get("/products/")
 async def list_products(db: Session = Depends(get_db)):
-    products = db.query(Product).filter(Product.is_deleted == False).all()
+    products = db.query(Product).all()
     return [p.to_dict() for p in products]
 
 @router.put("/products/{product_id}")
