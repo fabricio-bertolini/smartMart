@@ -7,6 +7,8 @@ import { fetchCategories, fetchProducts, fetchSalesStats, fetchSalesYears } from
 interface SalesStats {
   total: number;
   orders: number;
+  total_profit: number;
+  sales: Record<string, { orders: number; total_price: number; profit: number }>;
 }
 
 /**
@@ -65,7 +67,12 @@ export const useDashboardData = (year: number, categoryId: string) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [sales, setSales] = useState<Record<string, SalesData>>({});
-  const [salesStats, setSalesStats] = useState<SalesStats>({ total: 0, orders: 0 });
+  const [salesStats, setSalesStats] = useState<SalesStats>({
+    total: 0,
+    orders: 0,
+    total_profit: 0,
+    sales: {},
+  });
   const [availableYears, setAvailableYears] = useState<number[]>([]);
   
   // State for loading and error handling
@@ -98,8 +105,10 @@ export const useDashboardData = (year: number, categoryId: string) => {
       setSales(salesStatsData.sales || {});
       setAvailableYears(yearsData);
       setSalesStats({
+        sales: salesStatsData.sales || {},
         total: salesStatsData.total || 0,
-        orders: salesStatsData.orders || 0
+        orders: salesStatsData.orders || 0,
+        total_profit: salesStatsData.total_profit || 0
       });
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
