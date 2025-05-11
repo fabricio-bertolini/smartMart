@@ -95,7 +95,7 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 
 - **Products**
   - `POST /api/products` — Add a new product
-  - `GET /api/products` — List products (supports `category_id` filter)
+  - `GET /api/products` — List products (supports `category_id` filter, returns an array)
   - `POST /api/import/csv` — Import products from CSV (`type=products`)
   - `GET /api/products/export-csv` — Export products as CSV
 
@@ -116,12 +116,14 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 ## Usage
 
 1. **Dashboard:**  
-   View sales and profit charts, filter by year and category.
+   View sales and profit charts, filter by year and category.  
+   **Note:** The year filter in the dashboard is fully functional and will update the charts and counters based on the selected year.
 
 2. **Products:**  
    - Register new products via form.
    - Filter products by category.
    - Import/export products via CSV.
+   - **API returns products as a plain array, not wrapped in a `data` key.**
 
 3. **Categories:**  
    - Add new categories.
@@ -172,7 +174,8 @@ SmartMart/
 ## Troubleshooting
 
 - **Dashboard not showing data:**  
-  Ensure both backend and frontend are running. Check browser console/network tab. Make sure `/api/sales/stats` returns data.
+  Ensure both backend and frontend are running. Check browser console/network tab. Make sure `/api/sales/stats` returns data.  
+  **If the dashboard charts/counters are empty, ensure you have selected a year with data using the year filter.**
 
 - **CORS errors:**  
   Confirm `CORS_ORIGINS` in backend `.env` matches your frontend URL.
