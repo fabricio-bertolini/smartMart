@@ -1,11 +1,32 @@
 import React from 'react';
+import { fetchCategories } from '../services/apiService';
+import { useProductCreate } from '../hooks/useProductCreate';
 
+/**
+ * Interface for Category data
+ */
 interface Category {
   id: number;
   name: string;
 }
 
-export const ProductManualEntry = () => {
+/**
+ * Product Manual Entry Component
+ * 
+ * Provides a form interface for manually adding new products to the system.
+ * Includes validation, category selection, and error handling.
+ * 
+ * Features:
+ * - Form validation
+ * - Dynamic category selection
+ * - Error handling and display
+ * - Success feedback
+ * - Dark mode support
+ * - Accessible form controls
+ * - Field-level validation
+ */
+export const ProductManualEntry: React.FC = () => {
+  // State management
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [form, setForm] = React.useState({
     name: '',
@@ -14,62 +35,71 @@ export const ProductManualEntry = () => {
     category_id: '',
     brand: ''
   });
-  const [loading, setLoading] = React.useState(false);
-  const [message, setMessage] = React.useState<string | null>(null);
 
+  // Product creation hook
+  const { submit, loading, message, setMessage, error } = useProductCreate();
+
+  /**
+   * Effect to load categories on component mount
+   */
   React.useEffect(() => {
-    fetch('/api/categories')
-      .then(res => res.json())
-      .then(data => setCategories(data.data || []));
+    fetchCategories().then(setCategories);
   }, []);
 
+  /**
+   * Generic change handler for form inputs
+   */
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  /**
+   * Form submission handler
+   * Validates and submits product data, resets form on success
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setMessage(null);
-    try {
-      const response = await fetch('/api/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          price: Number(form.price),
-          category_id: Number(form.category_id)
-        })
-      });
-      if (!response.ok) throw new Error('Failed to add product');
-      setMessage('Product added successfully!');
-      setForm({ name: '', description: '', price: '', category_id: '', brand: '' });
-    } catch (err) {
-      setMessage('Error adding product');
-    } finally {
-      setLoading(false);
-    }
+    
+    await submit(
+      {
+        ...form,
+        price: Number(form.price),
+        category_id: Number(form.category_id)
+      },
+      () => setForm({ name: '', description: '', price: '', category_id: '', brand: '' })
+    );
   };
 
   return (
-    <div className="max-w-md mx-auto p-4 border rounded shadow bg-white">
-      <h2 className="text-xl font-bold mb-4">Add Product Manually</h2>
+    <div className="max-w-md mx-auto p-4 border rounded shadow bg-white dark:bg-gray-800 dark:border-gray-700">
+      <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-gray-100">Add Product Manually</h2>
+      
       <form onSubmit={handleSubmit} className="space-y-3">
+        {/* Product name input */}
         <input
           name="name"
           value={form.name}
           onChange={handleChange}
           placeholder="Product Name"
-          className="w-full border p-2 rounded"
+          className="w-full border p-2 rounded bg-white dark:bg-gray-800 
+            text-gray-900 dark:text-gray-100 dark:border-gray-600 
+            dark:placeholder-gray-400"
           required
         />
+
+        {/* Product description input */}
         <input
           name="description"
           value={form.description}
           onChange={handleChange}
           placeholder="Description"
-          className="w-full border p-2 rounded"
+          className="w-full border p-2 rounded bg-white dark:bg-gray-800 
+            text-gray-900 dark:text-gray-100 dark:border-gray-600 
+            dark:placeholder-gray-400"
         />
+
+        {/* Price input */}
         <input
           name="price"
           value={form.price}
@@ -78,37 +108,63 @@ export const ProductManualEntry = () => {
           type="number"
           step="0.01"
           min="0"
-          className="w-full border p-2 rounded"
+          className="w-full border p-2 rounded bg-white dark:bg-gray-800 
+            text-gray-900 dark:text-gray-100 dark:border-gray-600 
+            dark:placeholder-gray-400"
           required
         />
+
+        {/* Brand input */}
         <input
           name="brand"
           value={form.brand}
           onChange={handleChange}
           placeholder="Brand"
-          className="w-full border p-2 rounded"
+          className="w-full border p-2 rounded bg-white dark:bg-gray-800 
+            text-gray-900 dark:text-gray-100 dark:border-gray-600 
+            dark:placeholder-gray-400"
           required
         />
+
+        {/* Category selector */}
         <select
           name="category_id"
           value={form.category_id}
           onChange={handleChange}
-          className="w-full border p-2 rounded"
+          className="w-full border p-2 rounded bg-white dark:bg-gray-800 
+            text-gray-900 dark:text-gray-100 dark:border-gray-600"
           required
         >
-          <option value="">Select Category</option>
-          {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          <option value="" className="dark:bg-gray-800">Select Category</option>
+          {(Array.isArray(categories) ? categories : []).map(cat => (
+            <option key={cat.id} value={cat.id} className="dark:bg-gray-800">
+              {cat.name}
+            </option>
           ))}
         </select>
+
+        {/* Submit button */}
         <button
           type="submit"
-          className="w-full bg-blue-600 text-white py-2 rounded"
+          className="w-full bg-blue-600 dark:bg-blue-700 text-white py-2 rounded 
+            hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors
+            disabled:opacity-50 disabled:cursor-not-allowed"
           disabled={loading}
         >
           {loading ? 'Adding...' : 'Add Product'}
         </button>
-        {message && <div className="mt-2 text-center text-sm">{message}</div>}
+
+        {/* Status messages */}
+        {message && (
+          <div className="mt-2 text-center text-sm text-gray-600 dark:text-gray-300">
+            {message}
+          </div>
+        )}
+        {error && (
+          <div className="mt-2 text-center text-sm text-red-600 dark:text-red-400">
+            {error}
+          </div>
+        )}
       </form>
     </div>
   );

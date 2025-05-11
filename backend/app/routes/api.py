@@ -17,6 +17,11 @@ router = APIRouter()
 
 @router.post("/products")
 async def create_product(product: dict, db: Session = Depends(get_db)):
+    """
+    Create a new product in the database.
+    Expects a dict with name, description, price, category_id, and brand.
+    """
+    # Create a new product in the database
     required_fields = {"name", "description", "price", "category_id", "brand"}
     if not all(field in product for field in required_fields):
         raise HTTPException(status_code=400, detail="Missing required fields")
@@ -34,6 +39,11 @@ async def create_product(product: dict, db: Session = Depends(get_db)):
 
 @router.get("/products")
 async def list_products(category_id: int = None, db: Session = Depends(get_db)):
+    """
+    List all products, optionally filtered by category_id.
+    Returns a list of product dicts.
+    """
+    # List all products, optionally filtered by category_id
     query = db.query(Product)
     if category_id:
         query = query.filter(Product.category_id == category_id)
@@ -41,7 +51,22 @@ async def list_products(category_id: int = None, db: Session = Depends(get_db)):
 
 @router.get("/categories")
 async def list_categories(db: Session = Depends(get_db)):
-    return {"data": [{"id": c.id, "name": c.name} for c in db.query(Category).all()]}
+    """
+    List all categories in the database.
+    Returns all categories from the PostgreSQL categories table.
+    """
+    try:
+        # Direct query to the categories table
+        categories = db.query(Category).all()
+        
+        # Log the categories for debugging
+        print(f"Fetched {len(categories)} categories from database")
+        
+        # Return categories as array of objects with id and name
+        return [{"id": c.id, "name": c.name} for c in categories]
+    except Exception as e:
+        print(f"Error fetching categories: {str(e)}")
+        return {"error": "Failed to fetch categories"}
 
 @router.post("/import/csv") 
 async def import_csv(
@@ -49,6 +74,11 @@ async def import_csv(
     type: str = Form(...),
     db: Session = Depends(get_db)
 ):
+    """
+    Import products, categories, or sales from a CSV file.
+    The 'type' form field determines which model to import.
+    """
+    # Import products, categories, or sales from a CSV file
     logger.info(f"Received file upload: {file.filename}, type: {type}")
     
     if not file or not file.filename:
@@ -250,6 +280,11 @@ async def get_sales_stats(
     category_id: int = Query(None),
     year: int = Query(None)
 ):
+    """
+    Get monthly sales and profit statistics.
+    Optionally filter by category and year.
+    """
+    # Return monthly sales and profit statistics, optionally filtered by category and year
     try:
         query = db.query(Sale)
         if category_id is not None:
@@ -281,6 +316,10 @@ async def get_sales_stats(
 
 @router.get("/products/export-csv")
 async def export_products_csv(db: Session = Depends(get_db)):
+    """
+    Export all products as a CSV file.
+    """
+    # Export all products as a CSV file
     products = db.query(Product).all()
     
     output = StringIO()
@@ -305,6 +344,10 @@ async def export_products_csv(db: Session = Depends(get_db)):
 
 @router.get("/sales/export-csv")
 async def export_sales_csv(db: Session = Depends(get_db)):
+    """
+    Export all sales as a CSV file.
+    """
+    # Export all sales as a CSV file
     sales = db.query(Sale).all()
     
     output = StringIO()
@@ -326,3 +369,35 @@ async def export_sales_csv(db: Session = Depends(get_db)):
     )
     response.headers["Content-Disposition"] = "attachment; filename=sales.csv"
     return response
+
+# Add a health check endpoint for frontend connectivity testing
+
+@router.get("/health")
+async def health_check(db: Session = Depends(get_db)):
+    """
+    Health check endpoint that also verifies database connectivity
+    Returns success only if both API and database are working
+    """
+    try:
+        # Test database connection by running a simple query
+        result = db.execute("SELECT 1").fetchone()
+        if result and result[0] == 1:
+            # Database connection successful
+            return {
+                "status": "healthy",
+                "message": "API server and database connection are working",
+                "timestamp": datetime.now().isoformat()
+            }
+        else:
+            return {
+                "status": "unhealthy", 
+                "message": "Database query failed", 
+                "timestamp": datetime.now().isoformat()
+            }
+    except Exception as e:
+        print(f"Health check failed: {str(e)}")
+        return {
+            "status": "error",
+            "message": f"Database connection error: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }

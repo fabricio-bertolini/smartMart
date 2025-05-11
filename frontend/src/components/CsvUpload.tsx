@@ -1,61 +1,54 @@
 import React from 'react';
+import { Button } from '@/components/ui';
+import { useCsvUpload } from '../hooks/useCsvUpload';
 
-export const CsvUpload = () => {
+/**
+ * CsvUpload Component
+ * 
+ * Handles CSV file uploads for products, categories, and sales data.
+ * Provides feedback on upload status and validates file format.
+ * 
+ * Features:
+ * - Multiple data type support (products, categories, sales)
+ * - File type validation
+ * - Upload progress feedback
+ * - Error handling and display
+ * - Success confirmation
+ * - Dark mode support
+ * - Accessible inputs and controls
+ */
+export const CsvUpload: React.FC = () => {
+  // State management
   const [file, setFile] = React.useState<File | null>(null);
-  const [loading, setLoading] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
   const [importType, setImportType] = React.useState<'products' | 'categories' | 'sales'>('products');
+  const { handleUpload, loading, error, success, setSuccess, setError } = useCsvUpload();
 
-  async function handleUpload() {
+  /**
+   * Handles the upload process
+   * Validates file presence and triggers upload
+   */
+  const onUpload = async () => {
     if (!file) return;
-    setLoading(true);
-    setError(null);
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('type', importType);
-
-    try {
-      const response = await fetch('/api/import/csv', {
-        method: 'POST',
-        body: formData
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || `Failed to upload ${importType} data`);
-      }
-
-      const data = await response.json();
-      if (data.warnings) {
-        alert(`Import completed with warnings:\n${data.warnings.join('\n')}`);
-      } else {
-        alert(`Successfully imported ${data.message}`);
-      }
-      setFile(null);
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      setError(error instanceof Error ? error.message : 'Failed to upload file');
-    } finally {
-      setLoading(false);
-    }
-  }
+    await handleUpload(file, importType);
+    setFile(null);
+  };
 
   return (
     <div className="space-y-4">
+      {/* Import type selector */}
       <div className="flex gap-4 mb-4">
         <select
           value={importType}
           onChange={(e) => setImportType(e.target.value as 'products' | 'categories' | 'sales')}
-          className="px-3 py-2 border rounded-md"
+          className="px-3 py-2 border rounded-md bg-white dark:bg-gray-800 dark:text-gray-100 dark:border-gray-600"
         >
-          <option value="products">Products</option>
-          <option value="categories">Categories</option>
-          <option value="sales">Sales</option>
+          <option value="products" className="dark:bg-gray-800">Products</option>
+          <option value="categories" className="dark:bg-gray-800">Categories</option>
+          <option value="sales" className="dark:bg-gray-800">Sales</option>
         </select>
       </div>
 
+      {/* File input */}
       <input
         type="file"
         accept=".csv"
@@ -63,27 +56,40 @@ export const CsvUpload = () => {
           setFile(e.target.files?.[0] || null);
           setError(null);
         }}
-        className="block w-full text-sm text-gray-500 file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        className="block w-full text-sm text-gray-500 dark:text-gray-400 
+          file:py-2 file:px-4 file:border-0 file:text-sm file:font-semibold 
+          file:bg-blue-50 file:text-blue-700 
+          dark:file:bg-blue-900 dark:file:text-blue-300 
+          hover:file:bg-blue-100 dark:hover:file:bg-blue-800"
       />
       
+      {/* Error display */}
       {error && (
-        <div className="text-red-500 text-sm mt-2">
+        <div className="bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 px-3 py-2 rounded">
           {error}
         </div>
       )}
 
+      {/* Success message */}
+      {success && (
+        <div className="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 px-3 py-2 rounded whitespace-pre-line">
+          {success}
+        </div>
+      )}
+
+      {/* Upload button */}
       <div className="flex gap-4">
-        <button 
-          onClick={handleUpload}
-          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
+        <Button
+          onClick={onUpload}
           disabled={!file || loading}
         >
-          {loading ? 'Uploading...' : 'Upload CSV'} 
-        </button>
+          {loading ? 'Uploading...' : 'Upload CSV'}
+        </Button>
       </div>
 
-      <div className="mt-4 text-sm text-gray-600">
-        <h3 className="font-semibold mb-2">Expected CSV Format:</h3>
+      {/* Format guidelines */}
+      <div className="mt-4 text-sm text-gray-600 dark:text-gray-300">
+        <h3 className="font-semibold mb-2 text-gray-800 dark:text-gray-100">Expected CSV Format:</h3>
         {importType === 'products' && (
           <p>Products: name, description, price, category_id, brand</p>
         )}

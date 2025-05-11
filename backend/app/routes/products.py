@@ -1,10 +1,26 @@
-from fastapi import APIRouter, File, UploadFile, Depends, HTTPException
+"""
+Products API Routes Module
+
+This module defines the FastAPI routes for product management operations.
+It handles CRUD operations for products including listing, retrieval,
+creation, updating, and deletion.
+
+Routes:
+- GET /products: List all products with optional filtering
+- GET /products/{product_id}: Get a specific product by ID
+- POST /products: Create a new product
+- PUT /products/{product_id}: Update an existing product
+- DELETE /products/{product_id}: Delete a product
+"""
+
+from fastapi import APIRouter, File, UploadFile, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.models import Product, Category
 import pandas as pd
 from io import StringIO
 import csv
+from typing import Optional
 
 router = APIRouter()
 
@@ -71,3 +87,45 @@ async def export_products_csv(db: Session = Depends(get_db)):
         writer.writerow([p.id, p.name, p.description, p.price, p.category_id, p.brand])
     output.seek(0)
     return Response(content=output.read(), media_type="text/csv")
+
+@router.get("/")
+async def get_products(
+    category_id: Optional[str] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get all products with optional category filtering"""
+    try:
+        # Start with a base query
+        query = db.query(Product)
+        
+        # If category_id is provided, filter products by category
+        if category_id:
+            try:
+                # Convert to int - important for filtering!
+                category_id_int = int(category_id)
+                query = query.filter(Product.category_id == category_id_int)
+                print(f"Filtering products by category_id: {category_id_int}")
+            except ValueError:
+                print(f"Invalid category_id: {category_id}, not applying filter")
+        
+        products = query.all()
+        print(f"Found {len(products)} products")
+        
+        # Format response
+        return [
+            {
+                "id": p.id,
+                "name": p.name,
+                "description": p.description,
+                "price": float(p.price),
+                "stock": p.stock,
+                "category_id": p.category_id,
+                "brand": p.brand
+            }
+            for p in products
+        ]
+    except Exception as e:
+        print(f"Error in get_products: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return []

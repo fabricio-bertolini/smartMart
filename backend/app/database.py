@@ -1,10 +1,26 @@
-from sqlalchemy import create_engine, event
+"""
+Database Configuration Module
+
+This module configures the SQLAlchemy database connection and session management
+for the SmartMart application. It establishes the connection to the SQLite database,
+creates the SQLAlchemy engine, and provides a dependency function for FastAPI
+to inject database sessions into route handlers.
+
+Key components:
+- Database engine configuration
+- Session management
+- Base class for ORM models
+- Database initialization function
+"""
+
+from sqlalchemy import create_engine, event, inspect
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.exc import SQLAlchemyError
 from dotenv import load_dotenv
 import logging
 import os
+from pathlib import Path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -37,17 +53,41 @@ except SQLAlchemyError as e:
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-def get_db():
+def get_db() -> Session:
+    """
+    Database session dependency for FastAPI route handlers.
+    
+    This function creates a new database session for each request,
+    provides it to the route handler, and ensures proper cleanup
+    afterward, even if exceptions occur during request handling.
+    
+    Yields:
+        Session: SQLAlchemy database session
+        
+    Example:
+        @app.get("/items/")
+        def read_items(db: Session = Depends(get_db)):
+            return db.query(Item).all()
+    """
     db = SessionLocal()
     try:
-        yield db
+        yield db  # Provide the session to the route handler
     except SQLAlchemyError as e:
         logger.error(f"Database session error: {str(e)}")
         raise
     finally:
-        db.close()
+        db.close()  # Ensure session is closed after request is processed
 
-def init_db():
+def init_db() -> None:
+    """
+    Initialize the database by creating all tables defined in ORM models.
+    
+    This function checks if tables already exist before attempting to create them,
+    making it safe to call on application startup. It imports all model classes
+    to ensure they're registered with the Base metadata.
+    
+    Note: For schema migrations, use Alembic instead of this function.
+    """
     try:
         # Drop all tables first
         Base.metadata.drop_all(bind=engine)

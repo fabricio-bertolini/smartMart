@@ -1,3 +1,15 @@
+"""
+SmartMart Backend Service
+
+This is the main entry point for the SmartMart backend API service.
+It initializes the FastAPI application, sets up CORS middleware, 
+includes all API routes, and configures the application startup
+and shutdown events.
+
+The application is designed to serve inventory, product, category,
+and sales data for the SmartMart retail management system.
+"""
+
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from app.database import init_db
@@ -42,6 +54,17 @@ async def metrics():
         "system_load": os.getloadavg()[0]
     }
 
+# Entry point for running the API server
 if __name__ == "__main__":
+    """
+    Development server entry point with hot-reload enabled.
+    
+    This block executes when the script is run directly (not imported).
+    It starts the uvicorn ASGI server with the following configuration:
+    - app: The FastAPI application instance
+    - host: Network interface to bind to (0.0.0.0 allows external connections)
+    - port: TCP port to listen on (8000)
+    - reload: Enable auto-reload on file changes (dev environment only)
+    """
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

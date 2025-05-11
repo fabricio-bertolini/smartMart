@@ -1,3 +1,17 @@
+"""
+Sales Data Import Script
+
+This utility script imports sales data from CSV files into the SmartMart database.
+It provides functionality to bulk import historical sales records, validate data,
+and maintain database integrity during the import process.
+
+The script can be run directly from the command line and supports various options
+for data source, validation rules, and error handling strategies.
+
+Usage:
+    python import_sales_data.py --file sales_data.csv [options]
+"""
+
 # Import necessary libraries
 import pandas as pd
 from sqlalchemy import create_engine

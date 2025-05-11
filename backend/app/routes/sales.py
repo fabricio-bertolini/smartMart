@@ -1,12 +1,31 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form
+"""
+Sales API Routes Module
+
+This module defines the FastAPI routes for sales operations.
+It handles listing, retrieving, creating, and analyzing sales data,
+as well as generating sales statistics and reports.
+
+Routes:
+- GET /sales: List all sales with optional filtering
+- GET /sales/{sale_id}: Get a specific sale record by ID
+- POST /sales: Record a new sale
+- GET /sales/stats: Get sales statistics with optional filtering
+- GET /sales/years: Get list of years with recorded sales
+- GET /sales/monthly/{year}: Get monthly sales breakdown for a specific year
+"""
+
+from fastapi import APIRouter, Depends, HTTPException, Response, UploadFile, File, Form, Query
 from sqlalchemy.orm import Session
 from ..models.models import Sale, Product, Category
 from ..database import get_db
 from datetime import datetime, timedelta
 import csv
 from io import StringIO
-from sqlalchemy import func
+from sqlalchemy import func, extract
 import pandas as pd
+from typing import Optional
+import random
+from fastapi.middleware.cors import CORSMiddleware
 
 router = APIRouter(prefix="/sales", tags=["sales"])
 
@@ -79,28 +98,38 @@ async def export_sales(db: Session = Depends(get_db)):
     return Response(content=output.read(), media_type="text/csv")
 
 @router.get("/monthly")
-async def get_monthly_sales(year: int = datetime.now().year, db: Session = Depends(get_db)):
+async def get_monthly_sales(year: int = datetime.now().year, category_id: int = None, db: Session = Depends(get_db)):
     try:
-        sales = db.query(Sale)\
-            .filter(Sale.date.between(f"{year}-01-01", f"{year}-12-31"))\
-            .all()
-        
-        months = ["January", "February", "March", "April", "May", "June",
-                 "July", "August", "September", "October", "November", "December"]
-        
-        data = {month: {"quantity": 0, "total_price": 0} for month in months}
-        
-        for sale in sales:
-            month = sale.date.strftime("%B")
-            data[month]["quantity"] += sale.quantity
-            data[month]["total_price"] += float(sale.total_price)
-        
+        # Prepare months 1-12 with default 0
+        sales = {str(i): {"total_price": 0} for i in range(1, 13)}
+        total = 0
+        orders = 0
+
+        # Build query
+        query = db.query(
+            Sale,
+            func.extract('month', Sale.date).label('month'),
+            func.sum(Sale.total_price).label('total_price'),
+            func.sum(Sale.quantity).label('orders')
+        ).filter(func.extract('year', Sale.date) == year)
+
+        if category_id:
+            query = query.join(Product, Sale.product_id == Product.id)
+            query = query.filter(Product.category_id == category_id)
+
+        query = query.group_by('month')
+        results = query.all()
+
+        for _, month, total_price, order_count in results:
+            month_str = str(int(month))
+            sales[month_str] = {"total_price": float(total_price or 0)}
+            total += float(total_price or 0)
+            orders += int(order_count or 0)
+
         return {
-            "labels": months,
-            "datasets": [{
-                "label": "Monthly Sales",
-                "data": [data[month]["total_price"] for month in months]
-            }]
+            "sales": sales,
+            "total": total,
+            "orders": orders
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -124,28 +153,59 @@ async def get_sales_by_category(db: Session = Depends(get_db)):
     }
 
 @router.get("/stats")
-async def get_sales_stats(db: Session = Depends(get_db)):
+async def get_sales_stats(year: int = datetime.now().year, category_id: Optional[str] = None, db: Session = Depends(get_db)):
     try:
-        year_ago = datetime.now() - timedelta(days=365)
-        sales = db.query(Sale)\
-            .join(Product)\
-            .filter(Sale.date >= year_ago)\
-            .all()
+        # Initialize monthly data structure
+        monthly_data = {str(i): {"orders": 0, "total_price": 0, "profit": 0} for i in range(1, 13)}
         
-        monthly_stats = {}
+        # Build base query with monthly aggregation
+        query = db.query(
+            func.extract('month', Sale.date).label('month'),
+            func.count(Sale.id).label('orders'),
+            func.sum(Sale.total_price).label('total_price')
+        ).filter(
+            func.extract('year', Sale.date) == year
+        ).group_by('month')
+
+        # Add category filter if provided
+        if category_id and category_id.strip():
+            query = query.join(Product).filter(Product.category_id == int(category_id))
+
+        # Execute query and process results
+        results = query.all()
+        total_sales = 0
+        total_orders = 0
         
-        for sale in sales:
-            month = sale.date.strftime("%B %Y")
-            if month not in monthly_stats:
-                monthly_stats[month] = {"quantity": 0, "profit": 0}
-                
-            monthly_stats[month]["quantity"] += sale.quantity
-            profit = sale.total_price - (sale.product.cost * sale.quantity)
-            monthly_stats[month]["profit"] += profit
+        for result in results:
+            month = str(int(result.month))
+            orders = int(result.orders)
+            total_price = float(result.total_price or 0)
+            profit = total_price * 0.3  # Calculate profit as 30% of sales
             
-        return monthly_stats
+            monthly_data[month] = {
+                "orders": orders,
+                "total_price": total_price,
+                "profit": profit
+            }
+            
+            total_sales += total_price
+            total_orders += orders
+
+        return {
+            "sales": monthly_data,
+            "total": total_sales,
+            "orders": total_orders,
+            "total_profit": total_sales * 0.3
+        }
+
     except Exception as e:
+        print(f"Error in get_sales_stats: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/years")
+async def get_sales_years(db: Session = Depends(get_db)):
+    years = db.query(func.extract('year', Sale.date).label("year")).distinct().order_by("year").all()
+    return [int(y.year) for y in years if y.year is not None]
 
 @router.post("/import/csv")
 async def import_csv(
