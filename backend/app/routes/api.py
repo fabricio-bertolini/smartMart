@@ -8,7 +8,7 @@ import csv
 from io import StringIO
 from fastapi.responses import StreamingResponse
 from datetime import datetime, timedelta
-from sqlalchemy import extract, and_
+from sqlalchemy import extract, and_, func
 import logging
 
 logger = logging.getLogger(__name__)
@@ -47,7 +47,7 @@ async def list_products(category_id: int = None, db: Session = Depends(get_db)):
     query = db.query(Product)
     if category_id:
         query = query.filter(Product.category_id == category_id)
-    return {"data": [p.to_dict() for p in query.all()]}
+    return [p.to_dict() for p in query.all()]
 
 @router.get("/categories")
 async def list_categories(db: Session = Depends(get_db)):
@@ -284,35 +284,48 @@ async def get_sales_stats(
     Get monthly sales and profit statistics.
     Optionally filter by category and year.
     """
-    # Return monthly sales and profit statistics, optionally filtered by category and year
     try:
-        query = db.query(Sale)
+        # Initialize monthly data structure
+        monthly_data = {str(i): {"orders": 0, "total_price": 0, "profit": 0} for i in range(1, 13)}
+        
+        # Build base query with monthly aggregation
+        query = db.query(
+            func.extract('month', Sale.date).label('month'),
+            func.count(Sale.id).label('orders'),
+            func.sum(Sale.total_price).label('total_price')
+        )
+        if year:
+            query = query.filter(func.extract('year', Sale.date) == year)
         if category_id is not None:
             query = query.join(Product).filter(Product.category_id == category_id)
-        sales = query.all()
-        monthly_stats = {}
+        query = query.group_by('month')
+        results = query.all()
         total_sales = 0
-        for sale in sales:
-            month = sale.date.strftime("%B %Y")
-            if month not in monthly_stats:
-                monthly_stats[month] = {"quantity": 0, "total_price": 0}
-            monthly_stats[month]["quantity"] += sale.quantity
-            # Round each individual sale amount to prevent floating point errors
-            sale_amount = round(float(sale.total_price), 2)
-            monthly_stats[month]["total_price"] = round(monthly_stats[month]["total_price"] + sale_amount, 2) 
-            total_sales = round(total_sales + sale_amount, 2)
-            
-        if year:
-            monthly_stats = {
-                k: v for k, v in monthly_stats.items()
-                if k.endswith(str(year))
+        total_orders = 0
+
+        for result in results:
+            month = str(int(result.month))
+            orders = int(result.orders)
+            total_price = float(result.total_price or 0)
+            profit = total_price * 0.3  # 30% profit
+
+            monthly_data[month] = {
+                "orders": orders,
+                "total_price": total_price,
+                "profit": profit
             }
+            total_sales += total_price
+            total_orders += orders
+
         return {
-            "data": monthly_stats,
-            "total_sales": total_sales
+            "sales": monthly_data,
+            "total": total_sales,
+            "orders": total_orders,
+            "total_profit": total_sales * 0.3
         }
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Error in get_sales_stats: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/products/export-csv")
 async def export_products_csv(db: Session = Depends(get_db)):

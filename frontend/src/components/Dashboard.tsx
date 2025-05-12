@@ -141,7 +141,7 @@ export const Dashboard: React.FC = () => {
           </p>
         </div>
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Orders</h2>
+          <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Sales</h2>
           <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
             {salesStats.orders}
           </p>
