@@ -98,7 +98,7 @@ const Dashboard: React.FC = () => {
   const totalQuantity = salesStats?.orders || 0;
 
   const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
   return (
     <div className="container mx-auto p-4">
