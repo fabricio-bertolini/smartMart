@@ -1,6 +1,6 @@
 # SmartMart
 
-A full-stack inventory and sales management system built with FastAPI (Python) and Next.js (React).
+A test that was issued to be completed in one week. This is a full-stack inventory and sales management system built with FastAPI (Python) and Next.js (React).
 
 ---
 
