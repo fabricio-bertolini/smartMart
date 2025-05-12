@@ -75,7 +75,7 @@ export const Dashboard: React.FC = () => {
   const monthlyProfit = monthlySales.map(amount => amount * 0.3);
 
   const formatCurrency = (value: number): string =>
-    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
   if (loading) {
     return (
