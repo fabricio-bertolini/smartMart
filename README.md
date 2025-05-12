@@ -46,27 +46,27 @@ python -m venv venv
 venv\Scripts\activate  # On Windows
 pip install -r requirements.txt
 ```
+### 2. Database Initialization
 
-### 2. Database
+- Register your database credentials in the .env file. I used PostgreSQL locally.
 
-- By default, uses SQLite (`smartmart.db`).
-- To initialize tables and seed data:
-  ```bash
-  python scripts/seed_database.py
-  ```
+### 3. Database
+
+- By default, uses PostgreSQL (`smartmart.db`).
+- Check `/backend/db/init.sql` for the db creation script. Run each code block individually, from top to bottom.
 - To run migrations (if needed):
   ```bash
   alembic upgrade head
   ```
 
-### 3. Run the API
+### 4. Run the API
 
 ```bash
 uvicorn main:app --reload
 ```
 - The API will be available at `http://localhost:8000`
 
-### 4. API Endpoints
+### 5. API Endpoints
 
 - `POST /products` — Insert a new product
 - `GET /products` — List products (with sales and profit)
