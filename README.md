@@ -178,6 +178,10 @@ SmartMart/
 - **CORS errors:**  Confirm `CORS_ORIGINS` in backend `.env` matches your frontend URL.
 - **CSV Import Fails:**  Ensure your CSV columns match the expected format.
 
+# Demonstration
+
+![Alt text](https://i.imgur.com/iUkHUSe.gif)
+
 ---
 
 ## Questions
